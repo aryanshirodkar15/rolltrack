@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatDuration } from "@/lib/sessions";
 import { splitNames } from "@/lib/stats";
 import type { Session } from "@/lib/stats";
+import SessionForm from "@/components/SessionForm";
 
 // Long date like "Sat 3 Jan 2026" from a yyyy-mm-dd string, in UTC so the day
 // never shifts.
@@ -27,6 +28,7 @@ export default function SessionList({ sessions }: { sessions: Session[] }) {
   const router = useRouter();
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   async function remove(id: string) {
     setBusyId(id);
@@ -50,7 +52,15 @@ export default function SessionList({ sessions }: { sessions: Session[] }) {
 
   return (
     <div className="space-y-3">
-      {ordered.map((s) => (
+      {ordered.map((s) =>
+        editId === s.id ? (
+          <SessionForm
+            key={s.id}
+            campaigns={[]}
+            editSession={s}
+            onDone={() => setEditId(null)}
+          />
+        ) : (
         <article key={s.id} className="panel p-5">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span
@@ -98,13 +108,22 @@ export default function SessionList({ sessions }: { sessions: Session[] }) {
                 </button>
               </span>
             ) : (
-              <button
-                onClick={() => setConfirmId(s.id)}
-                className="ml-auto chip text-[11px] px-2 py-0.5"
-                aria-label="Delete session"
-              >
-                Remove
-              </button>
+              <span className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => setEditId(s.id)}
+                  className="chip text-[11px] px-2 py-0.5"
+                  aria-label="Edit session"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setConfirmId(s.id)}
+                  className="chip text-[11px] px-2 py-0.5"
+                  aria-label="Delete session"
+                >
+                  Remove
+                </button>
+              </span>
             )}
           </div>
 

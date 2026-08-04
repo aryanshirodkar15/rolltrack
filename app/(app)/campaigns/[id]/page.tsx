@@ -9,6 +9,7 @@ import { formatDuration } from "@/lib/sessions";
 import SessionForm from "@/components/SessionForm";
 import SessionList from "@/components/SessionList";
 import CampaignControls from "@/components/CampaignControls";
+import CampaignEditForm from "@/components/CampaignEditForm";
 
 export const dynamic = "force-dynamic";
 
@@ -65,8 +66,14 @@ export default async function CampaignPage({
             {campaign.dm ? ` · DM ${campaign.dm}` : ""}
             {campaign.setting ? ` · ${campaign.setting}` : ""}
           </p>
+          {campaign.notes && (
+            <p className="text-sm mt-3 leading-relaxed whitespace-pre-wrap" style={{ color: "var(--paper)" }}>
+              {campaign.notes}
+            </p>
+          )}
         </div>
         <CampaignControls id={campaign.id} status={campaign.status} name={campaign.name} />
+        <CampaignEditForm campaign={campaign} />
       </section>
 
       {/* Counters */}

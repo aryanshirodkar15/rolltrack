@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { durationMinutes, formatDuration } from "@/lib/sessions";
+import type { Session } from "@/lib/stats";
 
 type CampaignOption = { id: string; name: string; dm: string };
 
@@ -13,35 +14,48 @@ function todayISO(): string {
   return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
 }
 
-// The log-a-session form. Reused on the campaign page (with the campaign
-// fixed) and on the standalone /log page (with a picker). On success it
-// refreshes server data so the new night shows up immediately.
+const str = (v: number | null | undefined) => (v != null ? String(v) : "");
+
+// The session form, in two modes. With no `editSession` it logs a new night
+// (POST) and keeps the sticky context so logging several in a row is quick.
+// With `editSession` it edits that night in place (PATCH) and closes via
+// `onDone`. The field markup is shared so both modes always match.
 export default function SessionForm({
   campaigns,
   fixedCampaignId,
   defaults,
+  editSession,
+  onDone,
 }: {
   campaigns: CampaignOption[];
   fixedCampaignId?: string;
   defaults?: { dm?: string; level?: number | null; arc?: string; players?: string };
+  editSession?: Session;
+  onDone?: () => void;
 }) {
   const router = useRouter();
+  const isEdit = Boolean(editSession);
+
   const [campaignId, setCampaignId] = useState(
-    fixedCampaignId ?? campaigns[0]?.id ?? ""
+    editSession?.campaignId ?? fixedCampaignId ?? campaigns[0]?.id ?? ""
   );
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(todayISO());
-  const [sessionNumber, setSessionNumber] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [level, setLevel] = useState(defaults?.level != null ? String(defaults.level) : "");
-  const [gameDays, setGameDays] = useState("");
-  const [arc, setArc] = useState(defaults?.arc ?? "");
-  const [dm, setDm] = useState(defaults?.dm ?? "");
-  const [location, setLocation] = useState("");
-  const [players, setPlayers] = useState(defaults?.players ?? "");
-  const [summary, setSummary] = useState("");
-  const [rating, setRating] = useState("");
+  const [title, setTitle] = useState(editSession?.title ?? "");
+  const [date, setDate] = useState(editSession?.date ?? todayISO());
+  const [sessionNumber, setSessionNumber] = useState(
+    editSession ? String(editSession.sessionNumber) : ""
+  );
+  const [startTime, setStartTime] = useState(editSession?.startTime ?? "");
+  const [endTime, setEndTime] = useState(editSession?.endTime ?? "");
+  const [level, setLevel] = useState(
+    editSession ? str(editSession.level) : str(defaults?.level)
+  );
+  const [gameDays, setGameDays] = useState(editSession ? str(editSession.gameDays) : "");
+  const [arc, setArc] = useState(editSession?.arc ?? defaults?.arc ?? "");
+  const [dm, setDm] = useState(editSession?.dm ?? defaults?.dm ?? "");
+  const [location, setLocation] = useState(editSession?.location ?? "");
+  const [players, setPlayers] = useState(editSession?.players ?? defaults?.players ?? "");
+  const [summary, setSummary] = useState(editSession?.summary ?? "");
+  const [rating, setRating] = useState(editSession ? str(editSession.rating) : "");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -57,30 +71,43 @@ export default function SessionForm({
     setPending(true);
     setError("");
     setSaved(false);
-    const res = await fetch("/api/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        campaignId,
-        title,
-        date,
-        sessionNumber: sessionNumber || undefined,
-        startTime,
-        endTime,
-        level,
-        gameDays,
-        arc,
-        dm,
-        location,
-        players,
-        summary,
-        rating,
-      }),
-    });
+
+    const payload = {
+      title,
+      date,
+      startTime,
+      endTime,
+      level,
+      gameDays,
+      arc,
+      dm,
+      location,
+      players,
+      summary,
+      rating,
+      // Only send a session number when set, so blanking it in an edit leaves
+      // the existing one alone rather than tripping validation.
+      ...(sessionNumber ? { sessionNumber } : {}),
+    };
+
+    const res = await fetch(
+      isEdit ? `/api/sessions/${editSession!.id}` : "/api/sessions",
+      {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isEdit ? payload : { campaignId, ...payload }),
+      }
+    );
     const d = await res.json().catch(() => ({}));
     setPending(false);
     if (!res.ok) {
-      setError(d.error ?? "Could not log the session.");
+      setError(d.error ?? (isEdit ? "Could not save the changes." : "Could not log the session."));
+      return;
+    }
+
+    router.refresh();
+    if (isEdit) {
+      onDone?.();
       return;
     }
     // Keep the sticky context (campaign, DM, arc, players, level) so logging
@@ -93,15 +120,15 @@ export default function SessionForm({
     setSummary("");
     setRating("");
     setSaved(true);
-    router.refresh();
   }
 
   const label = "block text-xs uppercase tracking-widest mb-2 mono";
+  const showPicker = !isEdit && !fixedCampaignId;
 
   return (
     <div className="frame panel p-6">
       <div className="grid sm:grid-cols-2 gap-4">
-        {!fixedCampaignId && (
+        {showPicker && (
           <div className="sm:col-span-2">
             <label className={label} style={{ color: "var(--muted)" }}>
               Campaign
@@ -288,13 +315,20 @@ export default function SessionForm({
         </p>
       )}
 
-      <button
-        onClick={submit}
-        disabled={pending || campaigns.length === 0}
-        className="btn text-sm mt-6"
-      >
-        {pending ? "Logging..." : "Log this session"}
-      </button>
+      <div className="flex gap-3 mt-6">
+        <button
+          onClick={submit}
+          disabled={pending || (!isEdit && campaigns.length === 0)}
+          className="btn text-sm"
+        >
+          {pending ? "Saving..." : isEdit ? "Save changes" : "Log this session"}
+        </button>
+        {isEdit && (
+          <button onClick={() => onDone?.()} disabled={pending} className="btn-ghost text-sm">
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }
