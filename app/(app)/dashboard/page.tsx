@@ -165,7 +165,11 @@ export default async function DashboardPage() {
           </p>
           <p className="display text-2xl">
             {formatDuration(s.longest.minutes)}
-            {s.longest.arc ? ` · ${s.longest.arc}` : ""}
+            {s.longest.title
+              ? ` · ${s.longest.title}`
+              : s.longest.arc
+              ? ` · ${s.longest.arc}`
+              : ""}
           </p>
           {s.longest.summary && (
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>

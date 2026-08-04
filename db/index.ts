@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   user_id TEXT NOT NULL REFERENCES users(id),
   campaign_id TEXT NOT NULL REFERENCES campaigns(id),
   session_number INTEGER NOT NULL DEFAULT 1,
+  title TEXT NOT NULL DEFAULT '',
   date TEXT NOT NULL,
   arc TEXT NOT NULL DEFAULT '',
   game_days INTEGER,
@@ -80,6 +81,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_campaign ON sessions(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_user ON campaigns(user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);
 `);
+
+  // Migration for databases created before sessions could be named. ALTER
+  // ADD COLUMN throws if the column is already there, which is fine.
+  try {
+    await client.execute("ALTER TABLE sessions ADD COLUMN title TEXT NOT NULL DEFAULT ''");
+  } catch {}
 
   // Give every account a handle. Signup requires one, so this only ever
   // catches accounts made before usernames existed; once they all have one

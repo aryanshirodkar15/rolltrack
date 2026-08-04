@@ -45,6 +45,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     changes.date = date;
   }
+  if ("title" in body) changes.title = clean(body.title, 120);
   if ("arc" in body) changes.arc = clean(body.arc, 120);
   if ("summary" in body) changes.summary = clean(body.summary, 4000);
   if ("dm" in body) changes.dm = clean(body.dm, 60);

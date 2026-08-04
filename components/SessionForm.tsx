@@ -29,6 +29,7 @@ export default function SessionForm({
   const [campaignId, setCampaignId] = useState(
     fixedCampaignId ?? campaigns[0]?.id ?? ""
   );
+  const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayISO());
   const [sessionNumber, setSessionNumber] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -61,6 +62,7 @@ export default function SessionForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         campaignId,
+        title,
         date,
         sessionNumber: sessionNumber || undefined,
         startTime,
@@ -83,6 +85,7 @@ export default function SessionForm({
     }
     // Keep the sticky context (campaign, DM, arc, players, level) so logging
     // several nights in a row stays quick; clear the per-night fields.
+    setTitle("");
     setSessionNumber("");
     setStartTime("");
     setEndTime("");
@@ -122,6 +125,18 @@ export default function SessionForm({
             )}
           </div>
         )}
+
+        <div className="sm:col-span-2">
+          <label className={label} style={{ color: "var(--muted)" }}>
+            Title <span className="opacity-60">(optional)</span>
+          </label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Name this night, e.g. The Swamp Hive"
+            className="field"
+          />
+        </div>
 
         <div>
           <label className={label} style={{ color: "var(--muted)" }}>

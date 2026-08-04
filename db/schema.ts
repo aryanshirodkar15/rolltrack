@@ -52,6 +52,7 @@ export const sessions = sqliteTable("sessions", {
   campaignId: text("campaign_id").notNull().references(() => campaigns.id),
   // Nth session of this campaign, in play order. Set when logged.
   sessionNumber: integer("session_number").notNull().default(1),
+  title: text("title").notNull().default(""), // optional name for the night
   date: text("date").notNull(), // ISO yyyy-mm-dd of the night played
   arc: text("arc").notNull().default(""), // story arc label, e.g. "Jewel of Askana"
   gameDays: integer("game_days"), // in-world days that passed that session

@@ -91,6 +91,7 @@ export async function POST(req: Request) {
     userId,
     campaignId,
     sessionNumber,
+    title: clean(body.title, 120),
     date,
     arc: clean(body.arc, 120),
     gameDays: gameDays ?? null,

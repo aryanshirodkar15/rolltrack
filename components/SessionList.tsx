@@ -72,6 +72,8 @@ export default function SessionList({ sessions }: { sessions: Session[] }) {
             </span>
           </div>
 
+          {s.title && <p className="text-base font-semibold mt-2">{s.title}</p>}
+
           {s.summary && <p className="text-sm mt-3 leading-relaxed">{s.summary}</p>}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs" style={{ color: "var(--muted)" }}>
